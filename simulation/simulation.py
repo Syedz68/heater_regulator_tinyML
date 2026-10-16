@@ -1,4 +1,4 @@
-import time
+
 
 # Some physical constants, used for filling out the formulas for the physics emulation
 class PhysicalConstants:
@@ -26,8 +26,7 @@ class Room:
         self.wallThickness = wallThickness # (m)
         self.wallThermalConductivityCoefficient = wallThermalConductivityCoefficient # (w/Kg*C)
     def __str__(self):
-        return f"Room attributes: width={self.width}, length={self.length}, height={self.height}, wallThickness={self.wallThickness}, wallThermalConductivityCoefficient={self.wallThermalConductivityCoefficient}"
-
+        return f"Room attributes: width={self.width}, length={self.length}, height={self.height}, wallThickness={self.wallThickness}, wallThermalConductivityCoefficient={self.wallThermalConductivityCoefficient}"   
 # A physics simulation of a room with an inside and outside temperature. Time passes by
 # the tick() method.
 class SimEnv:    
@@ -52,8 +51,9 @@ class SimEnv:
         
         sumHeatTransferRate = self.heater.getEffectiveOutput() - heatTransferThroughWallsRate
         deltaEnergyWithinTimeframe = sumHeatTransferRate * timeStepInSeconds
-        self.totalPowerUsage += deltaEnergyWithinTimeframe
+        self.totalPowerUsage += self.heater.getEffectiveOutput() * timeStepInSeconds
         massOfAirInRoom = self.room.width * self.room.length * self.room.height * PhysicalConstants.airDensity
+        deltaEnergyWithinTimeframe += calculateEnergyChangeDueToVentilation(self.room, 4, self.insideTemperatureInCelsius, self.outsideTemperatureInCelsius,timeStepInSeconds)
         temperatureChangeInCelsius = calculateTemperatureChangeInCelsius(deltaEnergyWithinTimeframe,PhysicalConstants.airHeatCapacityIsobaric, massOfAirInRoom)
         self.insideTemperatureInCelsius += temperatureChangeInCelsius
     def __str__(self):
@@ -70,8 +70,12 @@ def calculateHeatDissipationRateInWatt(k ,A, DT,x):
 def calculateTemperatureChangeInCelsius(Q,c,m):
     return Q/(c*m)
 
+# airChangeRatePerHour is the number of times the air gets changed every hour. Recommended value is 5, source: https://www.engineeringtoolbox.com/air-change-rate-room-d_867.html
+def calculateEnergyChangeDueToVentilation(room, airChangeRatePerHour, insideTemperature,outsideTemperature,timeStepInSeconds):
+    return (((room.height * room.width * room.length * airChangeRatePerHour) / 3600 ) * timeStepInSeconds * PhysicalConstants.airHeatCapacityIsobaric * (outsideTemperature - insideTemperature))
 
 #------------ Example usage ---------------# Remove comments and run to test
+#import time
 #roomLength = 5      # (m)
 #roomWidth = 5       # (m)
 #roomHeight = 3      # (m)
@@ -85,7 +89,11 @@ def calculateTemperatureChangeInCelsius(Q,c,m):
 #x = 100
 #while(x>0):
 #    simulation.tick(60) # 1 minute timesteps
-#    time.sleep(1)
+#    time.sleep(0.01)
 #    print(simulation)
 #    x-=1
+#    if(simulation.insideTemperatureInCelsius > 25):
+#        heater.output = 0
+#    if(simulation.insideTemperatureInCelsius < 19):
+#        heater.output = 1
 #-----------------------------------------#
