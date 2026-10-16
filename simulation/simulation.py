@@ -1,8 +1,7 @@
 
-
 # Some physical constants, used for filling out the formulas for the physics emulation
 class PhysicalConstants:
-    fiberglassInsulationThermalConductivityCoefficient = 0.00035 # (w/Kg*C) Source : https://sandwichpaneltlbd.com/thermal-conductivity-understanding-fiberglass-insulation/
+    fiberglassInsulationThermalConductivityCoefficient = 0.035 # (w/m*C) / (w/m*K) Source : https://sandwichpaneltlbd.com/thermal-conductivity-understanding-fiberglass-insulation/
     airDensity = 1.1839 # (Kg) Source: https://en.wikipedia.org/wiki/Density_of_air
     airHeatCapacityIsobaric = 1006  # (J/Kg*m) Source: https://en.wikipedia.org/wiki/Table_of_specific_heat_capacities
 
@@ -53,7 +52,7 @@ class SimEnv:
         deltaEnergyWithinTimeframe = sumHeatTransferRate * timeStepInSeconds
         self.totalPowerUsage += self.heater.getEffectiveOutput() * timeStepInSeconds
         massOfAirInRoom = self.room.width * self.room.length * self.room.height * PhysicalConstants.airDensity
-        deltaEnergyWithinTimeframe += calculateEnergyChangeDueToVentilation(self.room, 4, self.insideTemperatureInCelsius, self.outsideTemperatureInCelsius,timeStepInSeconds)
+        deltaEnergyWithinTimeframe += calculateEnergyChangeDueToVentilation(self.room, 3, self.insideTemperatureInCelsius, self.outsideTemperatureInCelsius,timeStepInSeconds)
         temperatureChangeInCelsius = calculateTemperatureChangeInCelsius(deltaEnergyWithinTimeframe,PhysicalConstants.airHeatCapacityIsobaric, massOfAirInRoom)
         self.insideTemperatureInCelsius += temperatureChangeInCelsius
     def __str__(self):
@@ -86,14 +85,15 @@ def calculateEnergyChangeDueToVentilation(room, airChangeRatePerHour, insideTemp
 #heater = Heater(heaterEffect)
 #simulation = SimEnv(room,heater,20,0)
 #heater.output=1
-#x = 100
+#x = 10000000
 #while(x>0):
-#    simulation.tick(60) # 1 minute timesteps
-#    time.sleep(0.01)
-#    print(simulation)
+#    simulation.tick(1) # 1 second timesteps
+#    
+#    if(simulation.time%3600 == 0):
+#        print(simulation)
 #    x-=1
-#    if(simulation.insideTemperatureInCelsius > 25):
+#    if(simulation.insideTemperatureInCelsius > 24):
 #        heater.output = 0
-#    if(simulation.insideTemperatureInCelsius < 19):
+#    if(simulation.insideTemperatureInCelsius < 20):
 #        heater.output = 1
 #-----------------------------------------#
