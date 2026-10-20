@@ -93,31 +93,86 @@ def calculateTemperatureChangeInCelsius(Q,c,m):
 def calculateHeatTransferInJoules(c,m,DT):
     return c*m*DT
 
-#------------ Example usage ---------------# Remove comments and run to test
-#import time
-#roomLength = 5      # (m)
-#roomWidth = 5       # (m)
-#roomHeight = 3      # (m)
-#wallThickness = 0.2 # (m)
-#heaterEffect = 2000 # (W) Based on https://www.jula.se/catalog/bygg-och-farg/varme-och-ventilation/uppvarmning/elektriska-element/konvektorelement-025189/
-#airChangeRatePerHour = 0.5 # Based on minimum in living spaces: https://www.ventomaxx.de/en/blog/understanding-minimum-air-change-rate/
 
-#room = Room(roomLength,roomWidth,roomHeight,wallThickness,PhysicalConstants.fiberglassInsulationThermalConductivityCoefficient)
-#heater = Heater(heaterEffect)
-#vent = Ventilation(airChangeRatePerHour,room.height+room.width+room.length)
-#vent.isOn=True
-#simulation = SimEnv(room,heater,vent,20,0)
-#heater.setOutput=1
-#x = 10000000
-#while(x>0):
-#    simulation.tick(1) # 1 second timesteps
-#    
-#    if(simulation.time%(90) == 0): # print every 15 min
-#        print(simulation)
-#        time.sleep(0.5)
-#    x-=1
-#    if(simulation.insideTemperatureInCelsius > 24):
-#        heater.output = 0
-#    if(simulation.insideTemperatureInCelsius < 20):
-#        heater.output = 1
+
+
+# RGB Colors for use with sense hat
+class Color:
+    black = [0,0,0] # Black Color
+    red = [255,0,0] # Red color
+    orange = [255,155,0] # Orange Color
+    green = [0,255,0] # Green Color
+# The screen manages a 8x8 vector of rgb pixels, updating it according to the simulation values when
+# updateScreen() is called. Use with pi hat through the set_pixels(screen.screen)
+# Use below import to integrate to pi hat
+# from sense_hat import SenseHat
+# sense = SenseHat()
+class Screen:
+    def __init__(self):
+        # The pi hat has a 8x8 rgb LED Matrix monitor, pixels are settable with this 8x8 vector
+        self.screen = [
+                Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,
+                Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,
+                Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,
+                Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,
+                Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,
+                Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,
+                Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,
+                Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black,Color.black
+            ]
+
+    # Interface to view the screen in console, used for testing, not needed when running on pi.
+    def __str__(self):
+        toret = ""
+        for x in range(8):
+            toret+= f"{self.screen[x*8+0]}{self.screen[x*8+1]}{self.screen[x*8+2]}{self.screen[x*8+3]}{self.screen[x*8+4]}{self.screen[x*8+5]}{self.screen[x*8+6]}{self.screen[x*8+7]}\n"
+        return toret
+    
+    # Update the screen vector. This can then be displayed on pi hat through set_pixels(screen)
+    def updateScreen(self,simulation,price):
+        outp = simulation.heater.output * 100
+        col1 = Color.red if(outp>70) else Color.orange if(outp >30) else Color.green
+        maxprice = 200
+        pricevar = price
+        col2 = Color.red if(price>125) else Color.orange if(price >75) else Color.green
+        for x in range(8):
+            self.screen[8*7-(x * 8) +1] = col1 if(outp > 0) else Color.black
+            outp-=12.5
+        for x in range(8):
+                self.screen[8*7-(x * 8) +6] = col2 if(pricevar > 0) else Color.black
+                pricevar-= (maxprice / 8)
+
+#------------ Example usage ---------------# Remove comments and run to test
+import time
+roomLength = 5      # (m)
+roomWidth = 5       # (m)
+roomHeight = 3      # (m)
+wallThickness = 0.2 # (m)
+heaterEffect = 2000 # (W) Based on https://www.jula.se/catalog/bygg-och-farg/varme-och-ventilation/uppvarmning/elektriska-element/konvektorelement-025189/
+airChangeRatePerHour = 0.5 # Based on minimum in living spaces: https://www.ventomaxx.de/en/blog/understanding-minimum-air-change-rate/
+
+room = Room(roomLength,roomWidth,roomHeight,wallThickness,PhysicalConstants.fiberglassInsulationThermalConductivityCoefficient)
+heater = Heater(heaterEffect)
+vent = Ventilation(airChangeRatePerHour,room.height+room.width+room.length)
+screen = Screen()
+vent.isOn=True
+simulation = SimEnv(room,heater,vent,20,0)
+heater.setOutput=1
+x = 10000000
+while(x>0):
+    simulation.tick(1) # 1 second timesteps
+    
+    if(simulation.time%(90) == 0): # print every 15 min
+        print(simulation)
+        screen.updateScreen(simulation,200);
+        print(screen)
+        #screen.printScreenToConsole()
+        time.sleep(0.5)
+    x-=1
+    if(simulation.insideTemperatureInCelsius > 24):
+        heater.output = 0
+    if(simulation.insideTemperatureInCelsius < 20):
+        heater.output = 1
 #-----------------------------------------#
+
+
