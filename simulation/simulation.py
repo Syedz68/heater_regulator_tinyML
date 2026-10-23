@@ -10,12 +10,12 @@ class PhysicalConstants:
 class Heater:
     def __init__(self,maxEffect):
         self.maxEffect = maxEffect # (W)
-        self.output = 0 # should be a float between 0 and 1, gets multiplied with effect
+        self.output = 0.0 # should be a float between 0 and 1, gets multiplied with effect
         self.nrOfSwitches = 0
     def __str__(self):
         return f"Heater with effect of {self.maxEffect} is outputting at {self.output} max capacity."
     def setOutput(self,output):
-        if(((self.output==1) and (output == 0)) or ((self.output==0) and (output>0))):
+        if(((self.output>0) and (output == 0)) or ((self.output==0) and (output>0))):
             self.nrOfSwitches+=1
         self.output = output
         
@@ -102,6 +102,7 @@ class Color:
     red = [255,0,0] # Red color
     orange = [255,155,0] # Orange Color
     green = [0,255,0] # Green Color
+    blue = [0,0,255] # Blue Color
 # The screen manages a 8x8 vector of rgb pixels, updating it according to the simulation values when
 # updateScreen() is called. Use with pi hat through the set_pixels(screen.screen)
 # Use below import to integrate to pi hat
@@ -131,48 +132,65 @@ class Screen:
     # Update the screen vector. This can then be displayed on pi hat through set_pixels(screen)
     def updateScreen(self,simulation,price):
         outp = simulation.heater.output * 100
-        col1 = Color.red if(outp>70) else Color.orange if(outp >30) else Color.green
-        maxprice = 200
+        col1 = Color.red if(outp>70) else Color.orange if(outp >0) else Color.blue
+        maxprice = 0.2
         pricevar = price
         col2 = Color.red if(price>125) else Color.orange if(price >75) else Color.green
+        tempvar = simulation.insideTemperatureInCelsius - 10
+        
         for x in range(8):
-            self.screen[8*7-(x * 8) +1] = col1 if(outp > 0) else Color.black
-            outp-=12.5
-        for x in range(8):
-                self.screen[8*7-(x * 8) +6] = col2 if(pricevar > 0) else Color.black
-                pricevar-= (maxprice / 8)
+            self.screen[8*7-(x * 8) +6] = col2 if(pricevar > 0) else Color.black
+            pricevar-= (maxprice / 8)
+            self.screen[8*7-(x * 8) +1] = col1 if(tempvar > 0) else Color.black
+            tempvar-= (14/8)
+
+
+def InitDefaultSimEnv(insideTemperatureInCensius, outsideTemperatureInCelsius,heaterEffectInW):
+    roomLength = 5      # (m)
+    roomWidth = 5       # (m)
+    roomHeight = 3      # (m)
+    wallThickness = 0.2 # (m)
+    airChangeRatePerHour = 0.5 # Based on minimum in living spaces: https://www.ventomaxx.de/en/blog/understanding-minimum-air-change-rate/
+    
+    room = Room(roomLength,roomWidth,roomHeight,wallThickness,PhysicalConstants.fiberglassInsulationThermalConductivityCoefficient)
+    heater = Heater(heaterEffectInW)
+    vent = Ventilation(airChangeRatePerHour,room.height+room.width+room.length)
+    vent.isOn=True
+    heater.setOutput=1
+    return SimEnv(room,heater,vent,insideTemperatureInCensius,outsideTemperatureInCelsius)
+
 
 #------------ Example usage ---------------# Remove comments and run to test
-import time
-roomLength = 5      # (m)
-roomWidth = 5       # (m)
-roomHeight = 3      # (m)
-wallThickness = 0.2 # (m)
-heaterEffect = 2000 # (W) Based on https://www.jula.se/catalog/bygg-och-farg/varme-och-ventilation/uppvarmning/elektriska-element/konvektorelement-025189/
-airChangeRatePerHour = 0.5 # Based on minimum in living spaces: https://www.ventomaxx.de/en/blog/understanding-minimum-air-change-rate/
-
-room = Room(roomLength,roomWidth,roomHeight,wallThickness,PhysicalConstants.fiberglassInsulationThermalConductivityCoefficient)
-heater = Heater(heaterEffect)
-vent = Ventilation(airChangeRatePerHour,room.height+room.width+room.length)
-screen = Screen()
-vent.isOn=True
-simulation = SimEnv(room,heater,vent,20,0)
-heater.setOutput=1
-x = 10000000
-while(x>0):
-    simulation.tick(1) # 1 second timesteps
-    
-    if(simulation.time%(90) == 0): # print every 15 min
-        print(simulation)
-        screen.updateScreen(simulation,200);
-        print(screen)
-        #screen.printScreenToConsole()
-        time.sleep(0.5)
-    x-=1
-    if(simulation.insideTemperatureInCelsius > 24):
-        heater.output = 0
-    if(simulation.insideTemperatureInCelsius < 20):
-        heater.output = 1
+#import time
+#roomLength = 5      # (m)
+#roomWidth = 5       # (m)
+#roomHeight = 3      # (m)
+#wallThickness = 0.2 # (m)
+#heaterEffect = 2000 # (W) Based on https://www.jula.se/catalog/bygg-och-farg/varme-och-ventilation/uppvarmning/elektriska-element/konvektorelement-025189/
+#airChangeRatePerHour = 0.5 # Based on minimum in living spaces: https://www.ventomaxx.de/en/blog/understanding-minimum-air-change-rate/
+#
+#room = Room(roomLength,roomWidth,roomHeight,wallThickness,PhysicalConstants.fiberglassInsulationThermalConductivityCoefficient)
+#heater = Heater(heaterEffect)
+#vent = Ventilation(airChangeRatePerHour,room.height+room.width+room.length)
+#screen = Screen()
+#vent.isOn=True
+#simulation = SimEnv(room,heater,vent,20,0)
+#heater.setOutput=1
+#x = 10000000
+#while(x>0):
+#    simulation.tick(1) # 1 second timesteps
+#    
+#   if(simulation.time%(90) == 0): # print every 15 min
+#        print(simulation)
+#        screen.updateScreen(simulation,200);
+#        print(screen)
+#        #screen.printScreenToConsole()
+#        time.sleep(0.5)
+#    x-=1
+#    if(simulation.insideTemperatureInCelsius > 24):
+#        heater.output = 0
+#    if(simulation.insideTemperatureInCelsius < 20):
+#        heater.output = 1
 #-----------------------------------------#
 
 
